@@ -493,7 +493,7 @@ export default function OwnerDashboard() {
       setError('No hay usuario autenticado.')
       console.log("No hay usuario autenticado.")
       return
-    }
+    }//
 
     const unit = units.find((u) => u.id === tenantUnitId)
     const rentFromUnit = unit ? unit.rent_price : null
