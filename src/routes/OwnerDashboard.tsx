@@ -110,9 +110,13 @@ export default function OwnerDashboard() {
   const [newUnitIsAvailable, setNewUnitIsAvailable] = useState(true)
   const [newUnitNotes, setNewUnitNotes] = useState('')
 
+  const [tenantFullName, setTenantFullName] = useState('')
   const [tenantEmail, setTenantEmail] = useState('')
   const [tenantPhone, setTenantPhone] = useState('')
   const [tenantUnitId, setTenantUnitId] = useState('')
+  const [tenantRentAmount, setTenantRentAmount] = useState<number | ''>('')
+  const [showTenantForm, setShowTenantForm] = useState(false)
+  const [tenantHelperEmail, setTenantHelperEmail] = useState('')
 
   const ownerDisplayName = profile?.full_name || user?.email || 'Owner'
 
@@ -476,6 +480,7 @@ export default function OwnerDashboard() {
   }
 
   async function handleCreateTenant() {
+    console.log("Create tennant function start")
     setError('')
     if (!tenantEmail.trim() || !tenantUnitId) {
       setError('Email y unidad son obligatorios.')
@@ -486,19 +491,25 @@ export default function OwnerDashboard() {
     const ownerId = authData.user?.id
     if (!ownerId) {
       setError('No hay usuario autenticado.')
+      console.log("No hay usuario autenticado.")
       return
     }
 
     const unit = units.find((u) => u.id === tenantUnitId)
+    const rentFromUnit = unit ? unit.rent_price : null
+    const finalRentAmount =
+      tenantRentAmount === '' ? rentFromUnit : Number(tenantRentAmount)
 
     const { data, error } = await supabase
       .from('tenants')
+      
       .insert({
         owner_id: ownerId,
+        full_name: tenantFullName.trim() || null,
         email: tenantEmail.trim(),
         phone: tenantPhone.trim() || null,
         unit_id: tenantUnitId,
-        rent_amount: unit ? unit.rent_price : null,
+        rent_amount: finalRentAmount,
         move_in_date: new Date().toISOString().slice(0, 10),
         is_active: true,
       })
@@ -509,13 +520,19 @@ export default function OwnerDashboard() {
 
     if (error) {
       setError(`Error creando tenant: ${error.message}`)
+      
       return
     }
 
     setTenants((prev) => [...prev, data as Tenant])
+    setTenantFullName('')
     setTenantEmail('')
     setTenantPhone('')
     setTenantUnitId('')
+    setTenantRentAmount('')
+    setShowTenantForm(false)
+    setTenantHelperEmail(tenantEmail.trim())
+    console.log("Creado Tennant.")
   }
 
   function getTenantEmail(tenantId: string) {
@@ -996,75 +1013,140 @@ export default function OwnerDashboard() {
 
         {/* Tenants */}
         <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4 shadow-sm">
-        <h2 className="text-lg font-semibold">Tenants</h2>
+          <h2 className="text-lg font-semibold">Tenants</h2>
 
-        <div className="grid gap-4 md:grid-cols-[1.5fr,2fr]">
-          <div className="border rounded p-3 space-y-2">
-            <h3 className="font-medium text-sm">Crear tenant</h3>
+          <div className="grid gap-4 md:grid-cols-[1.5fr,2fr]">
+            <div className="border rounded p-3 space-y-2 relative">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-medium text-sm">Crear tenant</h3>
+                <button
+                  className="px-3 py-1.5 rounded-full border border-slate-300 bg-white text-xs hover:border-indigo-500 hover:text-indigo-600 transition"
+                  onClick={() => setShowTenantForm((prev) => !prev)}
+                  type="button"
+                >
+                  {showTenantForm ? 'Cerrar' : 'Nuevo tenant'}
+                </button>
+              </div>
 
-            <input
-              className="border rounded w-full p-2 text-sm"
-              placeholder="Email"
-              value={tenantEmail}
-              onChange={(e) => setTenantEmail(e.target.value)}
-            />
-            <input
-              className="border rounded w-full p-2 text-sm"
-              placeholder="Phone"
-              value={tenantPhone}
-              onChange={(e) => setTenantPhone(e.target.value)}
-            />
+              {showTenantForm && (
+                <div className="mt-3 space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs">
+                  <div className="space-y-1">
+                    <label>Full name</label>
+                    <input
+                      className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      placeholder="John Doe"
+                      value={tenantFullName}
+                      onChange={(e) => setTenantFullName(e.target.value)}
+                    />
+                  </div>
 
-            <select
-              className="border rounded w-full p-2 text-sm"
-              value={tenantUnitId}
-              onChange={(e) => setTenantUnitId(e.target.value)}
-            >
-              <option value="">Selecciona unit</option>
-              {units.map((unit) => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.type} - {unit.bedrooms} beds · {unit.bathrooms} baths
-                </option>
-              ))}
-            </select>
+                  <div className="space-y-1">
+                    <label>Email</label>
+                    <input
+                      className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      placeholder="tenant@email.com"
+                      value={tenantEmail}
+                      onChange={(e) => setTenantEmail(e.target.value)}
+                    />
+                  </div>
 
-            <button
-              className="px-3 py-2 rounded bg-black text-white text-sm"
-              onClick={handleCreateTenant}
-            >
-              Crear tenant
-            </button>
+                  <div className="space-y-1">
+                    <label>Phone</label>
+                    <input
+                      className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      placeholder="+1 555 000 000"
+                      value={tenantPhone}
+                      onChange={(e) => setTenantPhone(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label>Unit asignada</label>
+                    <select
+                      className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      value={tenantUnitId}
+                      onChange={(e) => setTenantUnitId(e.target.value)}
+                    >
+                      <option value="">Selecciona unit</option>
+                      {units.map((unit) => (
+                        <option key={unit.id} value={unit.id}>
+                         {unit.unit_label} {unit.type} - {unit.bedrooms} beds · {unit.bathrooms} baths
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label>Rent amount (opcional)</label>
+                    <input
+                      className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      type="number"
+                      placeholder="Tomará el rent de la unit si lo dejas vacío"
+                      value={tenantRentAmount}
+                      onChange={(e) =>
+                        setTenantRentAmount(
+                          e.target.value === '' ? '' : Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+
+                  <button
+                    className="mt-1 px-3 py-1.5 rounded bg-indigo-600 text-white text-xs hover:bg-indigo-700 transition"
+                    onClick={handleCreateTenant}
+                    type="button"
+                  >
+                    Guardar tenant
+                  </button>
+
+                  <p className="text-[11px] text-gray-600">
+                    Después de crear el tenant, pídele que se registre en la app con
+                    este email. Cuando haga login, se vinculará automáticamente.
+                  </p>
+                </div>
+              )}
+
+              {tenantHelperEmail && (
+                <div className="mt-3 text-[11px] bg-amber-50 border border-amber-300 rounded p-2 text-amber-800">
+                  Tenant creado para el email{' '}
+                  <span className="font-semibold">{tenantHelperEmail}</span>. Comparte
+                  este email con el inquilino y dile que se registre en
+                  <span className="font-mono"> /tenant/register</span>.
+                </div>
+              )}
+            </div>
+
+            <div className="border rounded p-3 space-y-2">
+              <h3 className="font-medium text-sm">Lista de tenants</h3>
+              {tenants.length === 0 && (
+                <p className="text-sm text-gray-600">
+                  Todavía no tienes tenants creados.
+                </p>
+              )}
+              <ul className="text-sm space-y-1">
+                {tenants.map((tenant) => {
+                  const unit = units.find((u) => u.id === tenant.unit_id)
+                  const displayName = tenant.full_name || tenant.email
+                  return (
+                    <li key={tenant.id}>
+                      <div className="font-medium">{displayName}</div>
+                      <div className="text-xs text-gray-600">
+                        Tel: {tenant.phone || 'N/A'} · Unidad:{' '}
+                        {unit ? `${unit.type} - ${unit.bedrooms} beds` : 'Sin unidad'}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Rent: {tenant.rent_amount ? `$${tenant.rent_amount}` : 'N/A'} ·
+                        Activo: {tenant.is_active !== false ? 'Sí' : 'No'} · Move-in:{' '}
+                        {tenant.move_in_date
+                          ? new Date(tenant.move_in_date).toLocaleDateString()
+                          : 'N/A'}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
           </div>
-
-          <div className="border rounded p-3 space-y-2">
-            <h3 className="font-medium text-sm">Lista de tenants</h3>
-            {tenants.length === 0 && (
-              <p className="text-sm text-gray-600">Todavía no tienes tenants creados.</p>
-            )}
-            <ul className="text-sm space-y-1">
-              {tenants.map((tenant) => {
-                const unit = units.find((u) => u.id === tenant.unit_id)
-                const displayName = tenant.full_name || tenant.email
-                return (
-                  <li key={tenant.id}>
-                    <div className="font-medium">{displayName}</div>
-                    <div className="text-xs text-gray-600">
-                      Tel: {tenant.phone || 'N/A'} · Unidad:{' '}
-                      {unit ? `${unit.type} - ${unit.bedrooms} beds` : 'Sin unidad'}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      Rent: {tenant.rent_amount ? `$${tenant.rent_amount}` : 'N/A'} ·
-                      Activo: {tenant.is_active !== false ? 'Sí' : 'No'} · Move-in:{' '}
-                      {tenant.move_in_date
-                        ? new Date(tenant.move_in_date).toLocaleDateString()
-                        : 'N/A'}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        </div>
         </section>
       </div>
     </div>
