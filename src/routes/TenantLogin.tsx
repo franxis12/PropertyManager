@@ -45,7 +45,7 @@ export default function TenantLogin() {
     }
 
     setLoading(false)
-    setMsg('✅ Login correcto')
+    setMsg('Login successful')
     navigate('/tenant/portal')
   }
 
@@ -56,9 +56,9 @@ export default function TenantLogin() {
         className="w-full max-w-sm space-y-5 bg-white border border-slate-200 rounded-2xl p-6 shadow-md"
       >
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Login Tenant</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Tenant Login</h1>
           <p className="text-xs text-gray-600">
-            Entra a tu portal para ver pagos y averías.
+            Sign in to see your payments and maintenance tickets.
           </p>
         </div>
 

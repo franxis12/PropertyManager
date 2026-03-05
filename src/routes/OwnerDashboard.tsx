@@ -118,6 +118,17 @@ export default function OwnerDashboard() {
   const [showTenantForm, setShowTenantForm] = useState(false)
   const [tenantHelperEmail, setTenantHelperEmail] = useState('')
 
+  const [leaseStartDate, setLeaseStartDate] = useState('')
+  const [leaseEndDate, setLeaseEndDate] = useState('')
+  const [leaseStatus, setLeaseStatus] = useState<'active' | 'pending' | 'ended'>(
+    'active',
+  )
+  const [leaseMonthlyRent, setLeaseMonthlyRent] = useState<number | ''>('')
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'tenants'>(
+    'overview',
+  )
+
   const ownerDisplayName = profile?.full_name || user?.email || 'Owner'
 
   useEffect(() => {
@@ -127,7 +138,7 @@ export default function OwnerDashboard() {
 
       const { data: authData, error: authError } = await supabase.auth.getUser()
       if (authError || !authData.user) {
-        setError('Debes iniciar sesión como owner.')
+        setError('You must be logged in as owner.')
         setLoading(false)
         return
       }
@@ -141,7 +152,7 @@ export default function OwnerDashboard() {
         .order('created_at', { ascending: true })
 
       if (propertiesError) {
-        setError(`Error cargando propiedades: ${propertiesError.message}`)
+        setError(`Error loading properties: ${propertiesError.message}`)
         setLoading(false)
         return
       }
@@ -158,7 +169,7 @@ export default function OwnerDashboard() {
         .eq('owner_id', ownerId)
 
       if (unitsError) {
-        setError(`Error cargando units: ${unitsError.message}`)
+        setError(`Error loading units: ${unitsError.message}`)
         setLoading(false)
         return
       }
@@ -173,7 +184,7 @@ export default function OwnerDashboard() {
         .eq('owner_id', ownerId)
 
       if (tenantsError) {
-        setError(`Error cargando tenants: ${tenantsError.message}`)
+        setError(`Error loading tenants: ${tenantsError.message}`)
         setLoading(false)
         return
       }
@@ -186,7 +197,7 @@ export default function OwnerDashboard() {
         .eq('owner_id', ownerId)
 
       if (leasesError) {
-        setError(`Error cargando leases: ${leasesError.message}`)
+        setError(`Error loading leases: ${leasesError.message}`)
         setLoading(false)
         return
       }
@@ -199,7 +210,7 @@ export default function OwnerDashboard() {
         .eq('owner_id', ownerId)
 
       if (paymentsError) {
-        setError(`Error cargando payments: ${paymentsError.message}`)
+        setError(`Error loading payments: ${paymentsError.message}`)
         setLoading(false)
         return
       }
@@ -213,7 +224,7 @@ export default function OwnerDashboard() {
         .order('created_at', { ascending: false })
 
       if (ticketsError) {
-        setError(`Error cargando tickets: ${ticketsError.message}`)
+        setError(`Error loading tickets: ${ticketsError.message}`)
         setLoading(false)
         return
       }
@@ -310,14 +321,14 @@ export default function OwnerDashboard() {
   async function handleCreateProperty() {
     setError('')
     if (!newPropertyName.trim() || !newPropertyAddress.trim()) {
-      setError('Nombre y dirección son obligatorios.')
+      setError('Name and address are required.')
       return
     }
 
     const { data: authData } = await supabase.auth.getUser()
     const ownerId = authData.user?.id
     if (!ownerId) {
-      setError('No hay usuario autenticado.')
+      setError('No authenticated user.')
       return
     }
 
@@ -332,7 +343,7 @@ export default function OwnerDashboard() {
       .single()
 
     if (error) {
-      setError(`Error creando property: ${error.message}`)
+      setError(`Error creating property: ${error.message}`)
       return
     }
 
@@ -345,14 +356,14 @@ export default function OwnerDashboard() {
     setError('')
 
     if (!selectedPropertyId) {
-      setError('Primero selecciona una property para crear la unidad.')
+      setError('Select a property first to create a unit.')
       return
     }
 
     const { data: authData } = await supabase.auth.getUser()
     const ownerId = authData.user?.id
     if (!ownerId) {
-      setError('No hay usuario autenticado.')
+      setError('No authenticated user.')
       return
     }
 
@@ -376,7 +387,7 @@ export default function OwnerDashboard() {
       .single()
 
     if (error) {
-      setError(`Error creando unit: ${error.message}`)
+      setError(`Error creating unit: ${error.message}`)
       return
     }
 
@@ -405,7 +416,7 @@ export default function OwnerDashboard() {
       .eq('id', selectedProperty.id)
 
     if (error) {
-      setError(`Error actualizando property: ${error.message}`)
+      setError(`Error updating property: ${error.message}`)
       return
     }
 
@@ -480,20 +491,18 @@ export default function OwnerDashboard() {
   }
 
   async function handleCreateTenant() {
-    console.log("Create tennant function start")
     setError('')
     if (!tenantEmail.trim() || !tenantUnitId) {
-      setError('Email y unidad son obligatorios.')
+      setError('Email and unit are required.')
       return
     }
 
     const { data: authData } = await supabase.auth.getUser()
     const ownerId = authData.user?.id
     if (!ownerId) {
-      setError('No hay usuario autenticado.')
-      console.log("No hay usuario autenticado.")
+      setError('No authenticated user.')
       return
-    }//
+    }
 
     const unit = units.find((u) => u.id === tenantUnitId)
     const rentFromUnit = unit ? unit.rent_price : null
@@ -502,7 +511,6 @@ export default function OwnerDashboard() {
 
     const { data, error } = await supabase
       .from('tenants')
-      
       .insert({
         owner_id: ownerId,
         full_name: tenantFullName.trim() || null,
@@ -519,25 +527,59 @@ export default function OwnerDashboard() {
       .single()
 
     if (error) {
-      setError(`Error creando tenant: ${error.message}`)
-      
+      setError(`Error creating tenant: ${error.message}`)
       return
     }
 
-    setTenants((prev) => [...prev, data as Tenant])
+    const createdTenant = data as Tenant
+
+    // Crear lease opcionalmente si se rellenaron fechas
+    if (leaseStartDate && leaseEndDate) {
+      const leaseRent =
+        leaseMonthlyRent === ''
+          ? finalRentAmount ?? 0
+          : Number(leaseMonthlyRent)
+
+      const { data: leaseData, error: leaseError } = await supabase
+        .from('leases')
+        .insert({
+          owner_id: ownerId,
+          tenant_id: createdTenant.id,
+          unit_id: tenantUnitId,
+          start_date: leaseStartDate,
+          end_date: leaseEndDate,
+          status: leaseStatus,
+          monthly_rent: leaseRent || 0,
+        })
+        .select(
+          'id, tenant_id, unit_id, owner_id, start_date, end_date, status, monthly_rent',
+        )
+        .single()
+
+      if (leaseError) {
+        setError(`Error creating lease: ${leaseError.message}`)
+      } else {
+        setLeases((prev) => [...prev, leaseData as Lease])
+      }
+    }
+
+    setTenants((prev) => [...prev, createdTenant])
     setTenantFullName('')
     setTenantEmail('')
     setTenantPhone('')
     setTenantUnitId('')
     setTenantRentAmount('')
+    setLeaseStartDate('')
+    setLeaseEndDate('')
+    setLeaseStatus('active')
+    setLeaseMonthlyRent('')
     setShowTenantForm(false)
     setTenantHelperEmail(tenantEmail.trim())
-    console.log("Creado Tennant.")
   }
 
   function getTenantEmail(tenantId: string) {
     const tenant = tenants.find((t) => t.id === tenantId)
-    return tenant ? tenant.email : 'Sin email'
+    return tenant ? tenant.email : 'No email'
   }
 
   async function handleLogout() {
@@ -548,7 +590,7 @@ export default function OwnerDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-sm text-gray-700">Cargando dashboard...</div>
+        <div className="text-sm text-gray-700">Loading dashboard...</div>
       </div>
     )
   }
@@ -581,13 +623,47 @@ export default function OwnerDashboard() {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        {/* Resumen */}
+        <nav className="flex gap-4 text-xs border-b border-slate-200 pb-2">
+          <button
+            className={`pb-1 border-b-2 ${
+              activeTab === 'overview'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-slate-500'
+            }`}
+            onClick={() => setActiveTab('overview')}
+          >
+            Overview
+          </button>
+          <button
+            className={`pb-1 border-b-2 ${
+              activeTab === 'properties'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-slate-500'
+            }`}
+            onClick={() => setActiveTab('properties')}
+          >
+            Properties
+          </button>
+          <button
+            className={`pb-1 border-b-2 ${
+              activeTab === 'tenants'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-slate-500'
+            }`}
+            onClick={() => setActiveTab('tenants')}
+          >
+            Tenants
+          </button>
+        </nav>
+
+        {/* Summary */}
+        {activeTab === 'overview' && (
         <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
-        <h2 className="text-lg font-semibold">Resumen</h2>
+        <h2 className="text-lg font-semibold">Summary</h2>
 
         <div className="grid gap-4 md:grid-cols-4 text-sm">
           <div className="border rounded p-3">
-            <p className="text-xs text-gray-600">Propiedades</p>
+            <p className="text-xs text-gray-600">Properties</p>
             <p className="text-xl font-semibold">{totalProperties}</p>
           </div>
 
@@ -600,20 +676,20 @@ export default function OwnerDashboard() {
           </div>
 
           <div className="border rounded p-3">
-            <p className="text-xs text-gray-600">Tenants activos</p>
+            <p className="text-xs text-gray-600">Active tenants</p>
             <p className="text-xl font-semibold">{activeTenantsCount}</p>
             <p className="text-xs text-gray-600">
-              Nuevos este mes: {newTenantsThisMonth.length}
+              New this month: {newTenantsThisMonth.length}
             </p>
           </div>
 
           <div className="border rounded p-3">
-            <p className="text-xs text-gray-600">Ingresos este mes</p>
+            <p className="text-xs text-gray-600">Income this month</p>
             <p className="text-xl font-semibold">
               ${totalPaidThisMonth.toFixed(2)}
             </p>
             <p className="text-xs text-gray-600">
-              Pendiente estimado: ${outstandingRentThisMonth.toFixed(2)}
+              Estimated outstanding: ${outstandingRentThisMonth.toFixed(2)}
             </p>
           </div>
         </div>
@@ -621,10 +697,10 @@ export default function OwnerDashboard() {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <h3 className="font-medium text-sm mb-1">
-              Pagos de este mes ({currentMonth}/{currentYear})
+              Payments this month ({currentMonth}/{currentYear})
             </h3>
             <ul className="text-sm space-y-1">
-              {paidThisMonth.length === 0 && <li>No hay pagos marcados como paid.</li>}
+              {paidThisMonth.length === 0 && <li>No payments marked as paid.</li>}
               {paidThisMonth.map((payment) => (
                 <li key={payment.id}>
                   {getTenantEmail(payment.tenant_id)} - lease {payment.lease_id} -{' '}
@@ -635,10 +711,10 @@ export default function OwnerDashboard() {
           </div>
 
           <div>
-            <h3 className="font-medium text-sm mb-1">Leases sin pago este mes</h3>
+            <h3 className="font-medium text-sm mb-1">Leases without payment this month</h3>
             <ul className="text-sm space-y-1">
               {leasesWithoutPaymentThisMonth.length === 0 && (
-                <li>Todos los leases activos tienen pago o no hay leases.</li>
+                <li>All active leases are paid, or there are no leases.</li>
               )}
               {leasesWithoutPaymentThisMonth.map((lease) => (
                 <li key={lease.id}>
@@ -651,30 +727,30 @@ export default function OwnerDashboard() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <h3 className="font-medium text-sm mb-1">Leases que vencen pronto</h3>
+            <h3 className="font-medium text-sm mb-1">Leases ending soon</h3>
             <ul className="text-sm space-y-1">
               {leasesEndingSoon.length === 0 && (
-                <li>No hay leases que venzan en los próximos 60 días.</li>
+                <li>No leases ending in the next 60 days.</li>
               )}
               {leasesEndingSoon.map((lease) => (
                 <li key={lease.id}>
-                  {getTenantEmail(lease.tenant_id)} - termina el {lease.end_date}
+                  {getTenantEmail(lease.tenant_id)} - ends on {lease.end_date}
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h3 className="font-medium text-sm mb-1">Averías abiertas</h3>
+            <h3 className="font-medium text-sm mb-1">Open maintenance tickets</h3>
             <p className="text-xs text-gray-600 mb-1">
-              Abiertas: {openTicketsCount} · En progreso: {inProgressTicketsCount} ·
-              Cerradas: {closedTicketsCount}
+              Open: {openTicketsCount} · In progress: {inProgressTicketsCount} ·
+              Closed: {closedTicketsCount}
             </p>
             <p className="text-xs text-gray-600 mb-1">
-              Coste total registrado: ${totalMaintenanceCost.toFixed(2)}
+              Total registered cost: ${totalMaintenanceCost.toFixed(2)}
             </p>
             <ul className="text-sm space-y-1">
-              {openTickets.length === 0 && <li>No hay averías abiertas.</li>}
+              {openTickets.length === 0 && <li>No open tickets.</li>}
               {openTickets.map((ticket) => (
                 <li key={ticket.id}>
                   {ticket.title} - {ticket.status}
@@ -686,34 +762,36 @@ export default function OwnerDashboard() {
 
         {newTenantsThisMonth.length > 0 && (
           <div>
-            <h3 className="font-medium text-sm mb-1">Nuevos tenants este mes</h3>
+            <h3 className="font-medium text-sm mb-1">New tenants this month</h3>
             <ul className="text-sm space-y-1">
               {newTenantsThisMonth.map((tenant) => (
                 <li key={tenant.id}>
                   <span className="font-medium">
                     {tenant.full_name || tenant.email}
                   </span>{' '}
-                  · move-in:{' '}
+                  · move-in date:{' '}
                   {tenant.move_in_date
                     ? new Date(tenant.move_in_date).toLocaleDateString()
-                    : 'sin fecha'}
+                    : 'no date'}
                 </li>
               ))}
             </ul>
           </div>
         )}
         </section>
+        )}
 
         {/* Properties */}
+        {activeTab === 'properties' && (
         <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4 shadow-sm">
-        <h2 className="text-lg font-semibold">Propiedades</h2>
+        <h2 className="text-lg font-semibold">Properties</h2>
 
         <div className="grid gap-4 md:grid-cols-[1.5fr,2fr]">
           <div className="space-y-3">
-            <h3 className="font-medium text-sm">Lista de propiedades</h3>
+            <h3 className="font-medium text-sm">Property list</h3>
             <div className="space-y-2">
               {properties.length === 0 && (
-                <p className="text-sm text-gray-600">No tienes propiedades todavía.</p>
+                <p className="text-sm text-gray-600">You do not have properties yet.</p>
               )}
               {properties.map((property) => (
                 <button
@@ -730,7 +808,7 @@ export default function OwnerDashboard() {
             </div>
 
             <div className="border rounded p-3 space-y-2">
-              <h3 className="font-medium text-sm">Crear nueva property</h3>
+              <h3 className="font-medium text-sm">Create new property</h3>
               <input
                 className="border rounded w-full p-2 text-sm"
                 placeholder="Nombre"
@@ -779,7 +857,7 @@ export default function OwnerDashboard() {
                   <h3 className="font-medium text-sm">Units de esta property</h3>
                   {propertyUnits.length === 0 && (
                     <p className="text-sm text-gray-600">
-                      No hay units asociadas a esta property todavía.
+                      There are no units for this property yet.
                     </p>
                   )}
                   <div className="space-y-2">
@@ -803,7 +881,7 @@ export default function OwnerDashboard() {
 
                   <div className="mt-4 border-t pt-3 space-y-2">
                     <h4 className="font-medium text-sm">
-                      Crear nueva unit en esta property
+                      Create new unit for this property
                     </h4>
                     <input
                       className="border rounded w-full p-2 text-sm"
@@ -1010,21 +1088,23 @@ export default function OwnerDashboard() {
           </div>
         </div>
         </section>
+        )}
 
         {/* Tenants */}
+        {activeTab === 'tenants' && (
         <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4 shadow-sm">
           <h2 className="text-lg font-semibold">Tenants</h2>
 
           <div className="grid gap-4 md:grid-cols-[1.5fr,2fr]">
             <div className="border rounded p-3 space-y-2 relative">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-medium text-sm">Crear tenant</h3>
+                <h3 className="font-medium text-sm">Create tenant</h3>
                 <button
                   className="px-3 py-1.5 rounded-full border border-slate-300 bg-white text-xs hover:border-indigo-500 hover:text-indigo-600 transition"
                   onClick={() => setShowTenantForm((prev) => !prev)}
                   type="button"
                 >
-                  {showTenantForm ? 'Cerrar' : 'Nuevo tenant'}
+                  {showTenantForm ? 'Close' : 'New tenant'}
                 </button>
               </div>
 
@@ -1061,13 +1141,13 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div className="space-y-1">
-                    <label>Unit asignada</label>
+                    <label>Assigned unit</label>
                     <select
                       className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       value={tenantUnitId}
                       onChange={(e) => setTenantUnitId(e.target.value)}
                     >
-                      <option value="">Selecciona unit</option>
+                      <option value="">Select unit</option>
                       {units.map((unit) => (
                         <option key={unit.id} value={unit.id}>
                          {unit.unit_label} {unit.type} - {unit.bedrooms} beds · {unit.bathrooms} baths
@@ -1077,11 +1157,11 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div className="space-y-1">
-                    <label>Rent amount (opcional)</label>
+                    <label>Rent amount (optional)</label>
                     <input
                       className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       type="number"
-                      placeholder="Tomará el rent de la unit si lo dejas vacío"
+                      placeholder="If empty, uses unit rent"
                       value={tenantRentAmount}
                       onChange={(e) =>
                         setTenantRentAmount(
@@ -1091,36 +1171,95 @@ export default function OwnerDashboard() {
                     />
                   </div>
 
+                  <div className="pt-2 mt-1 border-t border-slate-200 space-y-2">
+                    <p className="text-[11px] font-medium text-gray-700">
+                      Lease (optional)
+                    </p>
+                    <div className="grid gap-2 md:grid-cols-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px]">Start date</label>
+                        <input
+                          className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          type="date"
+                          value={leaseStartDate}
+                          onChange={(e) => setLeaseStartDate(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px]">End date</label>
+                        <input
+                          className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          type="date"
+                          value={leaseEndDate}
+                          onChange={(e) => setLeaseEndDate(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px]">Lease rent</label>
+                        <input
+                          className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          type="number"
+                          placeholder="If empty, uses rent amount"
+                          value={leaseMonthlyRent}
+                          onChange={(e) =>
+                            setLeaseMonthlyRent(
+                              e.target.value === '' ? '' : Number(e.target.value),
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px]">Status</label>
+                      <select
+                        className="border border-slate-300 rounded w-full p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        value={leaseStatus}
+                        onChange={(e) =>
+                          setLeaseStatus(
+                            e.target.value as 'active' | 'pending' | 'ended',
+                          )
+                        }
+                      >
+                        <option value="active">active</option>
+                        <option value="pending">pending</option>
+                        <option value="ended">ended</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <button
                     className="mt-1 px-3 py-1.5 rounded bg-indigo-600 text-white text-xs hover:bg-indigo-700 transition"
                     onClick={handleCreateTenant}
                     type="button"
                   >
-                    Guardar tenant
+                    Save tenant
                   </button>
 
                   <p className="text-[11px] text-gray-600">
-                    Después de crear el tenant, pídele que se registre en la app con
-                    este email. Cuando haga login, se vinculará automáticamente.
+                    After creating the tenant, ask them to sign up in the app with
+                    this email. When they log in, it will be linked automatically.
                   </p>
                 </div>
               )}
 
               {tenantHelperEmail && (
                 <div className="mt-3 text-[11px] bg-amber-50 border border-amber-300 rounded p-2 text-amber-800">
-                  Tenant creado para el email{' '}
-                  <span className="font-semibold">{tenantHelperEmail}</span>. Comparte
-                  este email con el inquilino y dile que se registre en
+                  Tenant created for email{' '}
+                  <span className="font-semibold">{tenantHelperEmail}</span>. Share
+                  this email with the tenant and ask them to sign up at
                   <span className="font-mono"> /tenant/register</span>.
                 </div>
               )}
             </div>
 
             <div className="border rounded p-3 space-y-2">
-              <h3 className="font-medium text-sm">Lista de tenants</h3>
+              <h3 className="font-medium text-sm">Tenant list</h3>
               {tenants.length === 0 && (
                 <p className="text-sm text-gray-600">
-                  Todavía no tienes tenants creados.
+                  You do not have tenants yet.
                 </p>
               )}
               <ul className="text-sm space-y-1">
@@ -1131,12 +1270,12 @@ export default function OwnerDashboard() {
                     <li key={tenant.id}>
                       <div className="font-medium">{displayName}</div>
                       <div className="text-xs text-gray-600">
-                        Tel: {tenant.phone || 'N/A'} · Unidad:{' '}
-                        {unit ? `${unit.type} - ${unit.bedrooms} beds` : 'Sin unidad'}
+                        Phone: {tenant.phone || 'N/A'} · Unit:{' '}
+                        {unit ? `${unit.type} - ${unit.bedrooms} beds` : 'No unit'}
                       </div>
                       <div className="text-xs text-gray-600">
                         Rent: {tenant.rent_amount ? `$${tenant.rent_amount}` : 'N/A'} ·
-                        Activo: {tenant.is_active !== false ? 'Sí' : 'No'} · Move-in:{' '}
+                        Active: {tenant.is_active !== false ? 'Yes' : 'No'} · Move-in:{' '}
                         {tenant.move_in_date
                           ? new Date(tenant.move_in_date).toLocaleDateString()
                           : 'N/A'}
@@ -1148,6 +1287,7 @@ export default function OwnerDashboard() {
             </div>
           </div>
         </section>
+        )}
       </div>
     </div>
   )

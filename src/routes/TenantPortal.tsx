@@ -59,7 +59,7 @@ export default function TenantPortal() {
 
       const { data: authData, error: authError } = await supabase.auth.getUser()
       if (authError || !authData.user) {
-        setError('Debes iniciar sesión como tenant.')
+        setError('You must be logged in as tenant.')
         setLoading(false)
         return
       }
@@ -73,14 +73,14 @@ export default function TenantPortal() {
         .maybeSingle()
 
       if (tenantError) {
-        setError(`Error cargando tenant: ${tenantError.message}`)
+        setError(`Error loading tenant: ${tenantError.message}`)
         setLoading(false)
         return
       }
 
       if (!tenantRow) {
         setError(
-          'No se encontró un tenant asociado a tu usuario. Pide a tu owner que te cree primero.',
+          'No tenant record is linked to this user. Ask your owner to create it first.',
         )
         setLoading(false)
         return
@@ -117,7 +117,7 @@ export default function TenantPortal() {
           .order('month', { ascending: false })
 
         if (paymentsError) {
-          setError(`Error cargando payments: ${paymentsError.message}`)
+          setError(`Error loading payments: ${paymentsError.message}`)
           setLoading(false)
           return
         }
@@ -134,7 +134,7 @@ export default function TenantPortal() {
         .order('created_at', { ascending: false })
 
       if (ticketsError) {
-        setError(`Error cargando tickets: ${ticketsError.message}`)
+        setError(`Error loading tickets: ${ticketsError.message}`)
         setLoading(false)
         return
       }
@@ -258,7 +258,7 @@ export default function TenantPortal() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-sm text-gray-700">Cargando portal del tenant...</div>
+        <div className="text-sm text-gray-700">Loading tenant portal...</div>
       </div>
     )
   }
@@ -271,8 +271,7 @@ export default function TenantPortal() {
             <h1 className="text-2xl font-semibold tracking-tight">Tenant Portal</h1>
             {tenant && (
               <p className="text-xs text-gray-600">
-                Sesión iniciada como{' '}
-                <span className="font-medium">{tenant.email}</span>
+                Logged in as <span className="font-medium">{tenant.email}</span>
               </p>
             )}
           </div>
@@ -291,32 +290,32 @@ export default function TenantPortal() {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        {/* Pagos */}
+        {/* Payments */}
         <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
-          <h2 className="text-lg font-semibold">Pagos</h2>
+          <h2 className="text-lg font-semibold">Payments</h2>
 
         {lease ? (
           <>
             <p className="text-sm">
-              Lease actual: rent mensual{' '}
+              Current lease: monthly rent{' '}
               <span className="font-medium">${lease.monthly_rent}</span>
             </p>
 
             <div className="border rounded p-3 space-y-2">
               <h3 className="font-medium text-sm">
-                Mes actual: {currentMonth}/{currentYear}
+                Current month: {currentMonth}/{currentYear}
               </h3>
               {currentPayment ? (
                 <p className="text-sm">
-                  Estado: <span className="font-medium">{currentPayment.status}</span>{' '}
+                  Status: <span className="font-medium">{currentPayment.status}</span>{' '}
                   {currentPayment.paid_at && (
                     <span className="text-xs text-gray-600">
-                      (pagado el {new Date(currentPayment.paid_at).toLocaleDateString()})
+                      (paid on {new Date(currentPayment.paid_at).toLocaleDateString()})
                     </span>
                   )}
                 </p>
               ) : (
-                <p className="text-sm">No hay pago registrado para este mes.</p>
+                <p className="text-sm">No payment recorded for this month.</p>
               )}
 
               {(!currentPayment || currentPayment.status !== 'paid') && (
@@ -330,11 +329,9 @@ export default function TenantPortal() {
             </div>
 
             <div className="space-y-1">
-              <h3 className="font-medium text-sm">Historial de pagos</h3>
+              <h3 className="font-medium text-sm">Payment history</h3>
               <ul className="text-sm space-y-1">
-                {payments.length === 0 && (
-                  <li>No hay pagos registrados todavía.</li>
-                )}
+                {payments.length === 0 && <li>No payments recorded yet.</li>}
                 {payments.map((payment) => (
                   <li key={payment.id}>
                     {payment.month}/{payment.year} - ${payment.amount} -{' '}
@@ -346,38 +343,38 @@ export default function TenantPortal() {
           </>
         ) : (
           <p className="text-sm text-gray-600">
-            No se encontró un lease activo asociado a tu usuario.
+            No active lease found for this user.
           </p>
         )}
         </section>
 
-        {/* Averías */}
+        {/* Maintenance */}
         <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
-          <h2 className="text-lg font-semibold">Averías</h2>
+          <h2 className="text-lg font-semibold">Maintenance</h2>
 
           <form className="space-y-2" onSubmit={handleCreateTicket}>
             <div className="space-y-1">
-              <label className="text-xs">Título</label>
+              <label className="text-xs">Title</label>
               <input
                 className="border border-slate-300 rounded-lg w-full p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={ticketTitle}
                 onChange={(e) => setTicketTitle(e.target.value)}
-                placeholder="Ej: Fuga en el baño"
+                placeholder="Example: Water leak in the bathroom"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs">Descripción</label>
+              <label className="text-xs">Description</label>
               <textarea
                 className="border border-slate-300 rounded-lg w-full p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={ticketDescription}
                 onChange={(e) => setTicketDescription(e.target.value)}
-                placeholder="Explica el problema con más detalle..."
+                placeholder="Describe the issue in more detail..."
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs">Prioridad</label>
+              <label className="text-xs">Priority</label>
               <select
                 className="border border-slate-300 rounded-lg w-full p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={ticketPriority}
@@ -396,16 +393,14 @@ export default function TenantPortal() {
               className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition"
               disabled={!lease || !tenant}
             >
-              Crear ticket
+              Create ticket
             </button>
           </form>
 
           <div className="space-y-1">
-            <h3 className="font-medium text-sm">Mis tickets</h3>
+            <h3 className="font-medium text-sm">My tickets</h3>
             <ul className="text-sm space-y-1">
-              {tickets.length === 0 && (
-                <li>No has creado tickets todavía.</li>
-              )}
+              {tickets.length === 0 && <li>You have not created any tickets yet.</li>}
               {tickets.map((ticket) => (
                 <li key={ticket.id}>
                   <div className="font-medium">

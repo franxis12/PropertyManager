@@ -11,7 +11,7 @@ export default function CreatePropertyTest() {
 
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) {
-      setMsg('No hay usuario autenticado. Inicia sesión primero.')
+      setMsg('No authenticated user. Please log in first.')
       return
     }
 
@@ -30,7 +30,7 @@ export default function CreatePropertyTest() {
 
     setName('')
     setAddress('')
-    setMsg('✅ Property creada correctamente.')
+    setMsg('Property created successfully.')
   }
 
   return (

@@ -39,7 +39,7 @@ export default function Login() {
       )
     }
 
-    setMsg('✅ Login correcto')
+    setMsg('Login successful')
     navigate('/owner/dashboard')
   }
 
@@ -50,9 +50,9 @@ export default function Login() {
         className="w-full max-w-sm space-y-5 bg-white border border-slate-200 rounded-2xl p-6 shadow-md"
       >
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Login Owner</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Owner Login</h1>
           <p className="text-xs text-gray-600">
-            Entra al dashboard para gestionar tus propiedades.
+            Sign in to access your owner dashboard.
           </p>
         </div>
 

@@ -6,6 +6,7 @@ import OwnerDashboard from './routes/OwnerDashboard'
 import TenantRegister from './routes/TenantRegister'
 import TenantLogin from './routes/TenantLogin'
 import TenantPortal from './routes/TenantPortal'
+import Info from './routes/Info'
 import { RequireAuth } from './components/RequireAuth'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/tenant/register" element={<TenantRegister />} />
         <Route path="/tenant/login" element={<TenantLogin />} />
+        <Route path="/info" element={<Info />} />
 
         <Route
           path="/owner/dashboard"

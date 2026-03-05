@@ -32,7 +32,7 @@ export default function TenantRegister() {
 
     if (!user) {
       setLoading(false)
-      setMsg('No se pudo obtener el usuario después del registro.')
+      setMsg('Could not get user after sign up.')
       return
     }
 
@@ -52,7 +52,7 @@ export default function TenantRegister() {
       .eq('email', email)
 
     setLoading(false)
-    setMsg('✅ Registro correcto. Redirigiendo a tu portal...')
+    setMsg('Sign up successful. Redirecting to your portal...')
 
     navigate('/tenant/portal')
   }
@@ -64,14 +64,14 @@ export default function TenantRegister() {
         className="w-full max-w-sm space-y-5 bg-white border border-slate-200 rounded-2xl p-6 shadow-md"
       >
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Registro Tenant</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Tenant Sign Up</h1>
           <p className="text-xs text-gray-600">
-            Usa el mismo email que tu owner registró.
+            Use the same email your owner used when creating your record.
           </p>
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm">Nombre completo (opcional)</label>
+          <label className="text-sm">Full name (optional)</label>
           <input
             className="border border-slate-300 rounded-lg w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             value={fullName}
@@ -93,7 +93,7 @@ export default function TenantRegister() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm">Teléfono (texto)</label>
+          <label className="text-sm">Phone (text)</label>
           <input
             className="border border-slate-300 rounded-lg w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             value={phone}
@@ -119,7 +119,7 @@ export default function TenantRegister() {
           type="submit"
           disabled={loading}
         >
-          {loading ? 'Creando cuenta...' : 'Registrarse'}
+          {loading ? 'Creating account...' : 'Sign up'}
         </button>
 
         {msg && <p className="text-sm">{msg}</p>}

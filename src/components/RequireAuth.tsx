@@ -11,7 +11,7 @@ export function RequireAuth({ children, role }: Props) {
   const { user, profile, loading } = useAuth()
 
   if (loading) {
-    return <div className="p-6">Cargando...</div>
+    return <div className="p-6">Loading...</div>
   }
 
   if (!user) {
@@ -25,7 +25,7 @@ export function RequireAuth({ children, role }: Props) {
     if (profile?.role === 'owner') {
       return <Navigate to="/owner/dashboard" replace />
     }
-    return <div className="p-6">No autorizado.</div>
+    return <div className="p-6">Not authorized.</div>
   }
 
   return <>{children}</>
