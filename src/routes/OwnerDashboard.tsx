@@ -538,7 +538,7 @@ export default function OwnerDashboard() {
       const leaseRent =
         leaseMonthlyRent === ''
           ? finalRentAmount ?? 0
-          : Number(leaseMonthlyRent)
+          : Number(leaseMonthlyRent)//
 
       const { data: leaseData, error: leaseError } = await supabase
         .from('leases')
